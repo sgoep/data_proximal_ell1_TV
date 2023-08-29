@@ -1,4 +1,4 @@
-Matlab Code for Feature reconstruction from sparse tomographic data. In particular, this code is used in the paper
+Matlab implementation of relevant functions and procedures used in the publication
 
 Data-proximal complementary ℓ1-TV reconstruction forlimited data CT, 
 [https://doi.org/10.48550/arXiv.2304.11599](https://doi.org/10.48550/arXiv.2304.11599)
