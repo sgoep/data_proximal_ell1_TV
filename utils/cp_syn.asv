@@ -1,0 +1,129 @@
+function [ubar, err] = cp_syn(x0, g, h, A, AT, Psi, PsiT, N, L, lambda, gamma, nmax, f, show, oldnew, wave)
+
+if wave
+    %% FOR WAVELET
+    theta = 1;
+    sigma = 1/L;
+    tau   = 1/L;
+    
+    [u, S] = Psi(x0);
+%     u = x0;
+    p = zeros(size(g));
+    
+    if strcmp(oldnew, 'old')
+        q = zeros(size(h));
+    elseif strcmp(oldnew, 'newradon')
+        q = zeros(size(h));
+    elseif strcmp(oldnew, 'newcurvelet')
+        q = gmultiply(0, h);
+    end
+    
+    ubar = u;
+    
+    n = 1;
+    err = zeros(1, nmax);
+    if show == 1
+        figure
+    end
+    while n <= nmax
+        
+        p = gmultiply(gadd(p, gmultiply(sigma, gsubtract(A(PsiT(ubar, S)), g))),1/(1+sigma));
+        if strcmp(oldnew, 'old')
+            q = gmultiply(gadd(q, gmultiply(sigma, gsubtract(PsiT(ubar, S), h))),1/(1+sigma));
+            [C, S] = Psi(AT(p) + q);
+            v = gsubtract(u, gmultiply(tau, C));
+        elseif strcmp(oldnew, 'newradon')
+            q = gmultiply(gadd(q, gmultiply(sigma, gsubtract(A(PsiT(ubar, S)), h))),1/(1+sigma));
+            [C, S] = Psi(AT(p + q));
+            v = gsubtract(u, gmultiply(tau, C));
+        elseif strcmp(oldnew, 'newcurvelet')
+            q = gmultiply(gadd(q, gmultiply(sigma, gsubtract(ubar, h))),1/(1+sigma));
+            [C, S] = Psi(AT(p));
+            v = gsubtract(u, gmultiply(tau, gadd(C, q)));
+        elseif strcmp(oldnew, 'None')
+            [C, S] = Psi(AT(p));
+            v = gsubtract(u, gmultiply(tau, C));
+        end
+        uiter = SoftThresh(v, lambda);
+    
+    %     uiter = SoftThresh(gsubtract(u, gmultiply(tau, gadd(KT(p), BT(q)))), lambda);
+        ubar = gadd(uiter, gmultiply(theta, gsubtract(uiter, u)));
+    
+        u = uiter;
+    
+        err(n) = sum(abs(reshape(PsiT(ubar, S), (N)^2,1) - f(:)).^2)/sum(abs(f(:)).^2);
+        if mod(n, 1) == 0
+            if show == 1
+                subplot(121), imagesc(((PsiT(ubar, S)))), colorbar, colormap bone
+                subplot(122), plot(err)
+        %         subplot(133), plot_coeff_1D(ubar);
+                drawnow
+    %             fprintf('%d / %d, %d  \n', n, nmax, err(n))
+            end
+        end
+        n = n + 1;
+        
+    end
+
+else
+    %% NORMAL
+    theta = 1;
+    sigma = 1/L;
+    tau   = 1/L;
+    
+    u = x0;
+    p = zeros(size(g));
+    
+    if strcmp(oldnew, 'old')
+        q = zeros(size(h));
+    elseif strcmp(oldnew, 'newradon')
+        q = zeros(size(h));
+    elseif strcmp(oldnew, 'newcurvelet')
+        q = gmultiply(0, h);
+    end
+    
+    ubar = u;
+    
+    n = 1;
+    err = zeros(1, nmax);
+    if show == 1
+        figure
+    end
+    while n <= nmax
+    %     p = (p + sigma*(K(ubar) - g))/(1+sigma);
+        p = gmultiply(gadd(p, gmultiply(sigma, gsubtract(A(PsiT(ubar)), g))),1/(1+sigma));
+        if strcmp(oldnew, 'old')
+            q = gmultiply(gadd(q, gmultiply(sigma, gsubtract(PsiT(ubar), h))),1/(1+sigma));
+            v = gsubtract(u, gmultiply(tau, Psi(AT(p) + q)));
+        elseif strcmp(oldnew, 'newradon')
+            q = gmultiply(gadd(q, gmultiply(sigma, gsubtract(gamma*A(PsiT(ubar)), h))),1/(1+sigma));
+            v = gsubtract(u, gmultiply(tau, Psi(AT(p + q))));
+        elseif strcmp(oldnew, 'newcurvelet')
+            q = gmultiply(gadd(q, gmultiply(sigma, gsubtract(ubar, h))),1/(1+sigma));
+            v = gsubtract(u, gmultiply(tau, gadd(Psi(AT(p)), q)));
+        elseif strcmp(oldnew, 'None')
+            v = gsubtract(u, gmultiply(tau, Psi(AT(p))));
+        end
+        uiter = SoftThresh(v, lambda);
+    
+    %     uiter = SoftThresh(gsubtract(u, gmultiply(tau, gadd(KT(p), BT(q)))), lambda);
+        ubar = gadd(uiter, gmultiply(theta, gsubtract(uiter, u)));
+    
+        u = uiter;
+    
+        err(n) = sum(abs(reshape(PsiT(ubar), (N)^2,1) - f(:)).^2)/sum(abs(f(:)).^2);
+        if mod(n, 10) == 0
+            if show == 1
+                subplot(121), imagesc(abs((PsiT(ubar)))), colorbar, colormap bone
+                subplot(122), plot(err)
+        %         subplot(133), plot_coeff_1D(ubar);
+                drawnow
+                fprintf('%d / %d, %d  \n', n, nmax, err(n))
+            end
+        end
+        n = n + 1;
+        
+    end
+end
+
+end
